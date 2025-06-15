@@ -14,9 +14,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     boolean existsByTitle(String title);
     boolean existsByTitleAndIdNot(String title, Long id);
 
-    // 新增：检查ISBN是否存在
+    // 添加根据ISBN查询图书的方法
+    Optional<Book> findByIsbn(String isbn);
+
+    // 检查ISBN是否存在
     boolean existsByIsbn(String isbn);
 
-    // 新增：检查ISBN是否被其他图书使用
+    // 检查ISBN是否被其他图书使用
     boolean existsByIsbnAndIdNot(String isbn, Long id);
 }
