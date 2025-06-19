@@ -142,6 +142,13 @@
                     success: function() {
                         initSelect('#ageCategoryAdd', ageCategories); // 初始化年龄分类下拉框
                         form.render(); // 重新渲染表单
+                        
+                        // 初始化日期选择器（解决添加表单中日期字段的undefined问题）
+                        laydate.render({
+                            elem: '#addBookForm [name="publishDate"]',
+                            theme: 'default',
+                            value: new Date().getFullYear() + '-01-01'
+                        });
                     }
                 });
             });
@@ -217,7 +224,7 @@
                 `;
             }
 
-            // 创建添加表单的函数
+            // 创建添加表单的函数（修复data未定义的问题）
             function createAddForm() {
                 return `
                     <form id="addBookForm" class="layui-form" style="padding: 20px;">
@@ -245,7 +252,7 @@
                         <div class="layui-form-item">
                             <label class="layui-form-label">出版日期</label>
                             <div class="layui-input-block">
-                                <input type="text" name="publishDate" required lay-verify="required" value="${data.publishDate}" class="layui-input">
+                                <input type="text" name="publishDate" required lay-verify="required" class="layui-input">
                             </div>
                         </div>
 
@@ -325,7 +332,7 @@
                 layer.closeAll();
             });
 
-            // 提交添加表单（以application/json格式发送）
+            // 提交添加表单（以application/json格式发送，修复事件绑定问题）
             $(document).on('click', '#submitAddBook', function () {
                 if (!form.verify('required')) {
                     layer.msg('请填写所有必填字段');
@@ -367,4 +374,3 @@
     </script>
 </body>
 </html>
-
