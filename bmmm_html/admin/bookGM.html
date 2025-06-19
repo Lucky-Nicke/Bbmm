@@ -17,7 +17,6 @@
     <script src="../../bmmm_html/framework/jquery.mousewheel.min.js"></script>
     <script src="../../bmmm_html/framework/jquery.mCustomScrollbar.min.js"></script>
     <script src="../../bmmm_html/framework/cframe.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script> <!-- 时间处理库 -->
 </head>
 
 <body>
@@ -65,38 +64,17 @@
                     { field: 'ageCategory', title: '年龄分类', templet: function(d) {
                         return getAgeCategoryText(d.ageCategory);
                     }},
-                    { field: 'createTime', width: 180, title: '创建时间', templet: function(d) {
-                        return formatDateTime(d.createTime);
-                    }},
-                    { field: 'updateTime', width: 180, title: '更新时间', templet: function(d) {
-                        return formatDateTime(d.updateTime);
-                    }},
+                    { field: 'createTime', width: 180, title: '创建时间'},
+                    { field: 'updateTime', width: 180, title: '更新时间'},
                     { fixed: 'right', toolbar: '#actionButtons', title: '操作' }
                 ]],
                 page: true
             });
 
-            // 格式化日期时间
-            function formatDateTime(timeStr) {
-                if (!timeStr) return '-';
-                return moment(timeStr).format('YYYY-MM-DD HH:mm:ss');
-            }
-
             // 获取年龄分类文本
             function getAgeCategoryText(value) {
                 const category = ageCategories.find(c => c.value === value);
                 return category ? category.text : value;
-            }
-
-            // 初始化时间组件函数
-            function initDatePicker(selector) {
-                laydate.render({
-                    elem: selector,
-                    type: 'date', // 仅显示日期
-                    format: 'yyyy-MM-dd',
-                    trigger: 'click', // 点击输入框触发选择器
-                    theme: 'default'
-                });
             }
 
             // 初始化下拉框函数（支持默认值）
@@ -125,7 +103,6 @@
                         area: ['700px', '500px'],
                         content: createEditForm(data), // 使用表单创建函数
                         success: function() {
-                            initDatePicker('.date-picker'); // 弹窗打开后初始化时间组件
                             initSelect('#ageCategoryEdit', ageCategories, 'value', 'text', data.ageCategory); // 初始化年龄分类下拉框并设置默认值
                             form.render(); // 重新渲染表单
                         }
@@ -163,7 +140,6 @@
                     area: ['700px', '500px'],
                     content: createAddForm(), // 使用表单创建函数
                     success: function() {
-                        initDatePicker('.date-picker'); // 弹窗打开后初始化时间组件
                         initSelect('#ageCategoryAdd', ageCategories); // 初始化年龄分类下拉框
                         form.render(); // 重新渲染表单
                     }
@@ -206,11 +182,8 @@
 
                         <div class="layui-form-item">
                             <label class="layui-form-label">出版日期</label>
-                            <div class="layui-input-inline layui-input-wrap" style="width: 280px;">
-                                <div class="layui-input-prefix">
-                                    <i class="layui-icon layui-icon-date"></i>
-                                </div>
-                                <input type="text" name="publishDate" lay-verify="required|date" placeholder="yyyy-MM-dd" autocomplete="off" value="${data.publishDate}" class="layui-input date-picker">
+                            <div class="layui-input-block">
+                                <input type="text" name="publishDate" required lay-verify="required" value="${data.publishDate}" class="layui-input">
                             </div>
                         </div>
 
@@ -271,11 +244,8 @@
 
                         <div class="layui-form-item">
                             <label class="layui-form-label">出版日期</label>
-                            <div class="layui-input-inline layui-input-wrap" style="width: 280px;">
-                                <div class="layui-input-prefix">
-                                    <i class="layui-icon layui-icon-date"></i>
-                                </div>
-                                <input type="text" name="publishDate" lay-verify="required|date" placeholder="yyyy-MM-dd" autocomplete="off" class="layui-input date-picker">
+                            <div class="layui-input-block">
+                                <input type="text" name="publishDate" required lay-verify="required" value="${data.publishDate}" class="layui-input">
                             </div>
                         </div>
 
@@ -367,7 +337,7 @@
                     title: $('#addBookForm [name="title"]').val().trim(),
                     author: $('#addBookForm [name="author"]').val().trim(),
                     publisher: $('#addBookForm [name="publisher"]').val().trim(),
-                    publishDate: $('#addBookForm [name="publishDate"]').val().trim() || moment().format('YYYY-MM-DD'),
+                    publishDate: $('#addBookForm [name="publishDate"]').val().trim() || '2023-01-01',
                     description: $('#addBookForm [name="description"]').val().trim(),
                     isbn: $('#addBookForm [name="isbn"]').val().trim(),
                     ageCategory: $('#ageCategoryAdd select').val()
