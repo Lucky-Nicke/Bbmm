@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>借阅管理</title>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/base.css">
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/iconfont.css">
+    <script type="text/javascript" src="../../bmmm_html/framework/jquery-1.11.3.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/layui/css/layui.css">
+    <script type="text/javascript" src="../../bmmm_html/layui/layui.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/jquery.mCustomScrollbar.css">
+    <script src="../../bmmm_html/framework/jquery-ui-1.10.4.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mousewheel.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mCustomScrollbar.min.js"></script>
+    <script src="../../bmmm_html/framework/cframe.js"></script>
+</head>
+
+<body>
+    <div style="padding: 20px;">
+        <table class="layui-hide" id="borrowTable" lay-filter="borrowTable"></table>
+    </div>
+
+    <script>
+        layui.use(['table', 'layer', 'util'], function () {
+            var table = layui.table;
+            var layer = layui.layer;
+            var util = layui.util;
+
+            // 渲染表格
+            table.render({
+                elem: '#borrowTable',
+                url: 'http://192.168.1.222:8080/api/admin/borrowList',
+                method: 'get',
+                cols: [[
+                    { field: 'id', title: 'ID', width: 80 },
+                    { field: 'bookTitle', title: '书名', minWidth: 150 },
+                    { field: 'isbn', title: 'ISBN', minWidth: 180 },
+                    { field: 'borrower', title: '借阅者', width: 100 },
+                    { field: 'idCard', title: '身份证', minWidth: 180 },
+                    { field: 'phone', title: '手机号', minWidth: 120 },
+                    { field: 'borrowTime', title: '借阅时间', width: 140 },
+                    { field: 'returnTime', title: '归还时间', width: 160 },
+                    { field: 'createTime', title: '创建时间', width: 140 }
+                ]],
+                page: true,
+                limits: [10, 20, 50, 100],
+                limit: 10,
+                text: {
+                    none: '暂无数据'
+                },
+                done: function(res, curr, count) {
+                    if (!res) {
+                        layer.msg('数据加载失败', {icon: 5});
+                    } else if (res.data.length === 0) {
+                        console.log('暂无借阅记录');
+                    } else {
+                        console.log('成功加载', res.data.length, '条记录');
+                        
+                        // 检查每条记录的归还时间是否逾期
+                        var now = new Date().getTime();
+                        
+                        // 获取表格数据行（排除表头）
+                        var dataRows = this.elem.next().find('.layui-table-body tr');
+                        
+                        // 遍历表格中的每一行数据
+                        dataRows.each(function(i, tr){
+                            var rowData = res.data[i];
+                            if(rowData && rowData.returnTime){
+                                // 将归还时间转换为时间戳
+                                var returnTime = new Date(rowData.returnTime).getTime();
+                                
+                                // 如果归还时间小于当前时间，则表示逾期
+                                if(returnTime < now){
+                                    // 为逾期行添加红色字体样式
+                                    $(tr).find('td').css('color', '#f5222d');
+                                    
+                                    // 在归还时间单元格内添加逾期标记（同一行内）
+                                    var returnTimeCell = $(tr).find('td[data-field="returnTime"] .layui-table-cell');
+                                    returnTimeCell.append(
+                                        '<span class="layui-badge layui-bg-red" style="margin-left: 5px; vertical-align: middle;">逾期</span>'
+                                    );
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>

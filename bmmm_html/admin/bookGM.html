@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>图书管理系统</title>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/base.css">
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/iconfont.css">
+    <script type="text/javascript" src="../../bmmm_html/framework/jquery-1.11.3.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/layui/css/layui.css">
+    <script type="text/javascript" src="../../bmmm_html/layui/layui.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/jquery.mCustomScrollbar.css">
+    <script src="../../bmmm_html/framework/jquery-ui-1.10.4.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mousewheel.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mCustomScrollbar.min.js"></script>
+    <script src="../../bmmm_html/framework/cframe.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script> <!-- 时间处理库 -->
+</head>
+
+<body>
+    <div style="padding: 20px;">
+        <button class="layui-btn" id="addBookBtn">添加图书</button>
+        <table class="layui-hide" id="bookTable" lay-filter="bookTable"></table>
+    </div>
+
+    <table id="bookTable" lay-filter="bookTable"></table>
+
+    <script type="text/html" id="actionButtons">
+        <button class="layui-btn layui-btn-xs" lay-event="edit">编辑</button>
+        <button class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</button>
+    </script>
+
+    <script>
+        layui.use(['table', 'layer', 'util', 'form', 'laydate'], function () {
+            var table = layui.table;
+            var layer = layui.layer;
+            var util = layui.util;
+            var form = layui.form;
+            var laydate = layui.laydate; // 引入时间组件
+
+            // 年龄分类选项
+            const ageCategories = [
+                { value: '8+', text: '8+' },
+                { value: '12+', text: '12+' },
+                { value: '16+', text: '16+' },
+                { value: '18+', text: '18+' },
+                { value: 'all', text: '全年龄段' }
+            ];
+
+            // 渲染表格
+            table.render({
+                elem: '#bookTable',
+                url: 'http://192.168.1.222:8080/api/admin/bookList',
+                method: 'get',
+                cols: [[
+                    { field: 'id', width: 80, title: 'ID' },
+                    { field: 'title', title: '书名' },
+                    { field: 'author', title: '作者' },
+                    { field: 'publisher', title: '出版商' },
+                    { field: 'publishDate', width: 140, title: '出版日期' },
+                    { field: 'isbn', title: 'ISBN' },
+                    { field: 'ageCategory', title: '年龄分类', templet: function(d) {
+                        return getAgeCategoryText(d.ageCategory);
+                    }},
+                    { field: 'createTime', width: 180, title: '创建时间', templet: function(d) {
+                        return formatDateTime(d.createTime);
+                    }},
+                    { field: 'updateTime', width: 180, title: '更新时间', templet: function(d) {
+                        return formatDateTime(d.updateTime);
+                    }},
+                    { fixed: 'right', toolbar: '#actionButtons', title: '操作' }
+                ]],
+                page: true
+            });
+
+            // 格式化日期时间
+            function formatDateTime(timeStr) {
+                if (!timeStr) return '-';
+                return moment(timeStr).format('YYYY-MM-DD HH:mm:ss');
+            }
+
+            // 获取年龄分类文本
+            function getAgeCategoryText(value) {
+                const category = ageCategories.find(c => c.value === value);
+                return category ? category.text : value;
+            }
+
+            // 初始化时间组件函数
+            function initDatePicker(selector) {
+                laydate.render({
+                    elem: selector,
+                    type: 'date', // 仅显示日期
+                    format: 'yyyy-MM-dd',
+                    trigger: 'click', // 点击输入框触发选择器
+                    theme: 'default'
+                });
+            }
+
+            // 初始化下拉框函数（支持默认值）
+            function initSelect(selector, data, valueField = 'value', textField = 'text', defaultValue = '') {
+                let html = '<select ' + selector + ' lay-verify="required">\n';
+                html += '<option value="">请选择</option>\n';
+                data.forEach(item => {
+                    const selected = item[valueField] === defaultValue ? ' selected' : '';
+                    html += `<option value="${item[valueField]}"${selected}>${item[textField]}</option>\n`;
+                });
+                html += '</select>';
+                $(selector).html(html);
+                form.render('select'); // 重新渲染下拉框
+            }
+
+            // 监听表格工具条事件
+            table.on('tool(bookTable)', function (obj) {
+                var data = obj.data;
+                var event = obj.event;
+
+                if (event === 'edit') {
+                    // 编辑图书弹窗
+                    layer.open({
+                        title: '编辑图书',
+                        type: 1,
+                        area: ['700px', '500px'],
+                        content: createEditForm(data), // 使用表单创建函数
+                        success: function() {
+                            initDatePicker('.date-picker'); // 弹窗打开后初始化时间组件
+                            initSelect('#ageCategoryEdit', ageCategories, 'value', 'text', data.ageCategory); // 初始化年龄分类下拉框并设置默认值
+                            form.render(); // 重新渲染表单
+                        }
+                    });
+                } else if (event === 'delete') {
+                    // 删除图书
+                    layer.confirm('确认删除该图书吗？', { icon: 3, title: '提示' }, function (index) {
+                        $.ajax({
+                            url: 'http://192.168.1.222:8080/api/admin/bookDel',
+                            type: 'DELETE',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ id: data.id }),
+                            success: function (res) {
+                                if (res.success) {
+                                    layer.msg('删除成功');
+                                    table.reload('bookTable');
+                                } else {
+                                    layer.msg('删除失败: ' + res.message);
+                                }
+                            },
+                            error: function (err) {
+                                layer.msg('请求失败，请稍后再试');
+                            }
+                        });
+                        layer.close(index);
+                    });
+                }
+            });
+
+            // 添加图书按钮点击事件
+            $('#addBookBtn').click(function () {
+                layer.open({
+                    title: '添加图书',
+                    type: 1,
+                    area: ['700px', '500px'],
+                    content: createAddForm(), // 使用表单创建函数
+                    success: function() {
+                        initDatePicker('.date-picker'); // 弹窗打开后初始化时间组件
+                        initSelect('#ageCategoryAdd', ageCategories); // 初始化年龄分类下拉框
+                        form.render(); // 重新渲染表单
+                    }
+                });
+            });
+
+            // 创建编辑表单的函数
+            function createEditForm(data) {
+                return `
+                    <form id="editBookForm" class="layui-form" style="padding: 20px;">
+                        <input type="hidden" name="id" value="${data.id}">
+                        
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ID</label>
+                            <div class="layui-input-block">
+                                <input type="text" value="${data.id}" disabled class="layui-input">
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">书名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="title" value="${data.title}" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">作者</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="author" value="${data.author}" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">出版商</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="publisher" value="${data.publisher}" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">出版日期</label>
+                            <div class="layui-input-inline layui-input-wrap" style="width: 280px;">
+                                <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-date"></i>
+                                </div>
+                                <input type="text" name="publishDate" lay-verify="required|date" placeholder="yyyy-MM-dd" autocomplete="off" value="${data.publishDate}" class="layui-input date-picker">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">简介</label>
+                            <div class="layui-input-block">
+                                <textarea name="description" class="layui-textarea" placeholder="请输入图书简介">${data.description}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ISBN</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="isbn" value="${data.isbn}" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">年龄分类</label>
+                            <div class="layui-input-block" id="ageCategoryEdit">
+                                <!-- 下拉框通过JS动态生成并设置默认值 -->
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button type="button" class="layui-btn" id="submitEditBook">提交</button>
+                            </div>
+                        </div>  
+                    </form>
+                `;
+            }
+
+            // 创建添加表单的函数
+            function createAddForm() {
+                return `
+                    <form id="addBookForm" class="layui-form" style="padding: 20px;">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">书名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="title" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">作者</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="author" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">出版商</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="publisher" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">出版日期</label>
+                            <div class="layui-input-inline layui-input-wrap" style="width: 280px;">
+                                <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-date"></i>
+                                </div>
+                                <input type="text" name="publishDate" lay-verify="required|date" placeholder="yyyy-MM-dd" autocomplete="off" class="layui-input date-picker">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">简介</label>
+                            <div class="layui-input-block">
+                                <textarea name="description" class="layui-textarea" placeholder="请输入图书简介"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ISBN</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="isbn" required lay-verify="required" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">年龄分类</label>
+                            <div class="layui-input-block" id="ageCategoryAdd">
+                                <!-- 下拉框通过JS动态生成 -->
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button type="button" class="layui-btn" id="submitAddBook">提交</button>
+                            </div>
+                        </div>
+                    </form>
+                `;
+            }
+
+            // 提交编辑表单（确保ID正确拼接到API路径）
+            $(document).on('click', '#submitEditBook', function () {
+                if (!form.verify('required')) {
+                    layer.msg('请填写所有必填字段');
+                    return;
+                }
+
+                // 获取表单中的ID（确保不为undefined）
+                const bookId = $('#editBookForm [name="id"]').val();
+                if (!bookId) {
+                    layer.msg('图书ID不存在');
+                    return;
+                }
+
+                // 构建JSON数据
+                const bookData = {
+                    title: $('#editBookForm [name="title"]').val().trim(),
+                    author: $('#editBookForm [name="author"]').val().trim(),
+                    publisher: $('#editBookForm [name="publisher"]').val().trim(),
+                    publishDate: $('#editBookForm [name="publishDate"]').val().trim(),
+                    description: $('#editBookForm [name="description"]').val().trim(),
+                    isbn: $('#editBookForm [name="isbn"]').val().trim(),
+                    ageCategory: $('#ageCategoryEdit select').val()
+                };
+
+                // 发送PUT请求（ID已从表单中获取，确保路径正确）
+                $.ajax({
+                    url: `http://192.168.1.222:8080/api/admin/bookEdit/${bookId}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(bookData),
+                    success: function (res) {
+                        if (res.success) {
+                            layer.msg('编辑成功');
+                            table.reload('bookTable');
+                        } else {
+                            layer.msg('编辑失败: ' + res.message);
+                        }
+                    },
+                    error: function (err) {
+                        layer.msg('请求失败，请稍后再试');
+                    }
+                });
+                layer.closeAll();
+            });
+
+            // 提交添加表单（以application/json格式发送）
+            $(document).on('click', '#submitAddBook', function () {
+                if (!form.verify('required')) {
+                    layer.msg('请填写所有必填字段');
+                    return;
+                }
+
+                // 构建JSON数据
+                const bookData = {
+                    title: $('#addBookForm [name="title"]').val().trim(),
+                    author: $('#addBookForm [name="author"]').val().trim(),
+                    publisher: $('#addBookForm [name="publisher"]').val().trim(),
+                    publishDate: $('#addBookForm [name="publishDate"]').val().trim() || moment().format('YYYY-MM-DD'),
+                    description: $('#addBookForm [name="description"]').val().trim(),
+                    isbn: $('#addBookForm [name="isbn"]').val().trim(),
+                    ageCategory: $('#ageCategoryAdd select').val()
+                };
+
+                // 发送POST请求
+                $.ajax({
+                    url: 'http://192.168.1.222:8080/api/admin/bookAdd',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(bookData),
+                    success: function (res) {
+                        if (res.success) {
+                            layer.msg('添加成功');
+                            table.reload('bookTable');
+                        } else {
+                            layer.msg('添加失败：' + res.message, { icon: 5 });
+                        }
+                    },
+                    error: function (err) {
+                        layer.msg('网络请求失败，请检查接口地址或联系管理员', { icon: 2 });
+                    }
+                });
+                layer.closeAll();
+            });
+        })
+    </script>
+</body>
+</html>
+

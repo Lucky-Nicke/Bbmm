@@ -50,10 +50,10 @@ public class LoginServiceImpl implements LoginService {
 
         // 关键修改：将ADMIN改为admin
         if (account.getRole() == Account.Role.admin) {
-            redirectUrl = "/bbmm/bbmm_html/admin/admin-frame.html";
+            redirectUrl = "/Bbmm/bmmm_html/admin/admin-frame.html";
             role = "ADMIN";
         } else {
-            redirectUrl = "/bbmm/bbmm_html/user/user-frame.html";
+            redirectUrl = "/Bbmm/bmmm_html/user/user-frame.html";
             role = "USER";
         }
 

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>借阅管理</title>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/base.css">
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/iconfont.css">
+    <script type="text/javascript" src="../../bmmm_html/framework/jquery-1.11.3.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/layui/css/layui.css">
+    <script type="text/javascript" src="../../bmmm_html/layui/layui.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/jquery.mCustomScrollbar.css">
+    <script src="../../bmmm_html/framework/jquery-ui-1.10.4.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mousewheel.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mCustomScrollbar.min.js"></script>
+    <script src="../../bmmm_html/framework/cframe.js"></script>
+</head>
+
+<body>
+    <div style="padding: 20px;">
+        <!-- 添加"我要借书"按钮 -->
+        <div style="margin-bottom: 15px;">
+            <button class="layui-btn" id="addBorrowBtn">
+                <i class="layui-icon">&#xe654;</i> 我要借书
+            </button>
+        </div>
+        
+        <table class="layui-hide" id="borrowTable" lay-filter="borrowTable"></table>
+    </div>
+
+    <!-- 借书表单模态框 -->
+    <div id="borrowFormModal" style="display: none;">
+        <form class="layui-form" id="borrowForm" lay-filter="borrowForm">
+            <div class="layui-form-item" style="margin-top: 25px;">
+                <label class="layui-form-label">ISBN</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="isbn" required lay-verify="required" placeholder="请输入ISBN" autocomplete="off" class="layui-input">
+                </div>
+                <button type="button" class="layui-btn" id="searchBookBtn">
+                    <i class="layui-icon">&#xe615;</i> 模拟扫描枪扫描
+                </button>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">书名</label>
+                <div class="layui-input-block">
+                    <input type="text" name="bookTitle" required lay-verify="required" placeholder="请输入书名" autocomplete="off" class="layui-input" style="width: 350px;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">借阅者</label>
+                <div class="layui-input-block">
+                    <input type="text" name="borrower" required lay-verify="required" placeholder="请输入借阅者" autocomplete="off" class="layui-input" id="borrowerInput" style="width: 350px;" readonly>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">身份证</label>
+                <div class="layui-input-block">
+                    <input type="text" name="idCard" required lay-verify="required|idCard" placeholder="请输入身份证" autocomplete="off" class="layui-input" style="width: 350px;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">手机号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="phone" required lay-verify="required|phone" placeholder="请输入手机号" autocomplete="off" class="layui-input" style="width: 350px;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">借阅时间</label>
+                <div class="layui-input-block">
+                    <div class="layui-input-prefix">
+                        <i class="layui-icon layui-icon-date"></i>
+                    </div>
+                    <input type="text" name="borrowTime" required lay-verify="required|date" placeholder="请选择借阅时间" autocomplete="off" class="layui-input" id="borrowTimeInput" style="width: 350px;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">归还时间</label>
+                <div class="layui-input-block">
+                    <div class="layui-input-prefix">
+                        <i class="layui-icon layui-icon-date"></i>
+                    </div>
+                    <input type="text" name="returnTime" required lay-verify="required|date" placeholder="请选择归还时间" autocomplete="off" class="layui-input" id="returnTimeInput" style="width: 350px;">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="submitBorrow">提交</button>
+                    <button type="button" class="layui-btn layui-btn-primary" id="resetFormBtn">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 还书表单模态框 -->
+    <div id="returnFormModal" style="display: none;">
+        <form class="layui-form" id="returnForm" lay-filter="returnForm">
+            <input type="hidden" name="id" id="returnId">
+            
+            <div class="layui-form-item" style="margin-top: 25px;">
+                <label class="layui-form-label">ISBN</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="isbn" required lay-verify="required" placeholder="请输入ISBN" autocomplete="off" class="layui-input">
+                </div>
+                <button type="button" class="layui-btn" id="searchBookBtnReturn">
+                    <i class="layui-icon">&#xe615;</i> 模拟扫描枪扫描
+                </button>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">书名</label>
+                <div class="layui-input-block">
+                    <input type="text" name="book_title" required lay-verify="required" placeholder="请输入书名" autocomplete="off" class="layui-input" style="width: 350px;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">借阅者</label>
+                <div class="layui-input-block">
+                    <input type="text" name="borrower" required lay-verify="required" placeholder="请输入借阅者" autocomplete="off" class="layui-input" id="returnBorrowerInput" style="width: 350px;" readonly>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">身份证</label>
+                <div class="layui-input-block">
+                    <input type="text" name="id_card" required lay-verify="required" placeholder="请输入身份证" autocomplete="off" class="layui-input" id="returnIdCardInput" style="width: 350px;" readonly>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">手机号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="phone" required lay-verify="required|phone" placeholder="请输入手机号" autocomplete="off" class="layui-input" id="returnPhoneInput" style="width: 350px;" readonly>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="submitReturn">提交</button>
+                    <button type="button" class="layui-btn layui-btn-primary" id="resetReturnFormBtn">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        layui.use(['table', 'layer', 'util', 'form', 'laydate'], function () {
+            var table = layui.table;
+            var layer = layui.layer;
+            var util = layui.util;
+            var form = layui.form;
+            var laydate = layui.laydate;
+            
+            // 获取cookies中的username
+            function getCookie(name) {
+                var arr = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)(;|$)"));
+                if (arr != null) return unescape(arr[2]);
+                return null;
+            }
+            
+            var username = getCookie('username');
+            if (!username) {
+                layer.msg('未获取到用户信息，请重新登录', {icon: 5});
+                return;
+            }
+            
+            // 保存当前打开的layer索引
+            var currentLayerIndex = null;
+            
+            // 渲染表格 - 添加操作列
+            table.render({
+                elem: '#borrowTable',
+                url: 'http://192.168.1.222:8080/api/user/borrowListBook/' + username,
+                method: 'get',
+                cols: [[
+                    { field: 'id', title: 'ID', width: 80 },
+                    { field: 'bookTitle', title: '书名', minWidth: 150 },
+                    { field: 'isbn', title: 'ISBN', minWidth: 180 },
+                    { field: 'borrower', title: '借阅者', width: 100 },
+                    { field: 'idCard', title: '身份证', minWidth: 180 },
+                    { field: 'phone', title: '手机号', width: 120 },
+                    { field: 'borrowTime', title: '借阅时间', width: 140 },
+                    { field: 'returnTime', title: '归还时间', width: 160 },
+                    { field: 'createTime', title: '创建时间', width: 140 },
+                    { title: '操作', width: 100, templet: function(d){
+                        return '<button class="layui-btn layui-btn-xs" lay-event="returnBook">我要还书</button>';
+                    }}
+                ]],
+                page: true,
+                limits: [10, 20, 50, 100],
+                limit: 10,
+                text: {
+                    none: '暂无数据'
+                },
+                done: function(res, curr, count) {
+                    if (!res) {
+                        layer.msg('数据加载失败', {icon: 5});
+                    } else if (res.data.length === 0) {
+                        console.log('暂无借阅记录');
+                    } else {
+                        console.log('成功加载', res.data.length, '条记录');
+                        
+                        // 检查每条记录的归还时间是否逾期
+                        var now = new Date().getTime();
+                        
+                        // 获取表格数据行（排除表头）
+                        var dataRows = this.elem.next().find('.layui-table-body tr');
+                        
+                        // 遍历表格中的每一行数据
+                        dataRows.each(function(i, tr){
+                            var rowData = res.data[i];
+                            if(rowData && rowData.returnTime){
+                                // 将归还时间转换为时间戳
+                                var returnTime = new Date(rowData.returnTime).getTime();
+                                
+                                // 如果归还时间小于当前时间，则表示逾期
+                                if(returnTime < now){
+                                    // 为逾期行添加红色字体样式
+                                    $(tr).find('td').css('color', '#f5222d');
+                                    
+                                    // 在归还时间单元格内添加逾期标记（同一行内）
+                                    var returnTimeCell = $(tr).find('td[data-field="returnTime"] .layui-table-cell');
+                                    returnTimeCell.append(
+                                        '<span class="layui-badge layui-bg-red" style="margin-left: 5px; vertical-align: middle;">逾期</span>'
+                                    );
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+            
+            // 监听表格操作事件
+            table.on('tool(borrowTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'returnBook'){
+                    // 打开还书表单
+                    currentLayerIndex = layer.open({
+                        type: 1,
+                        title: '我要还书',
+                        content: $('#returnFormModal'),
+                        area: ['500px', '500px'],
+                        success: function () {
+                            // 填充表单数据，但ISBN保持为空
+                            $('#returnId').val(data.id);
+                            $('#returnBorrowerInput').val(data.borrower);
+                            $('#returnIdCardInput').val(data.idCard);
+                            $('#returnPhoneInput').val(data.phone);
+                            $('input[name="isbn"]').val(''); // 清空ISBN字段
+                            $('input[name="book_title"]').val(''); // 清空书名，让用户通过ISBN查询
+                            
+                            initDatePickers(); // 初始化日期选择器
+                        },
+                        end: function () {
+                            // 模态框关闭时可选的清理逻辑
+                            if (window.borrowDatePicker) {
+                                window.borrowDatePicker.destroy();
+                            }
+                            if (window.returnDatePicker) {
+                                window.returnDatePicker.destroy();
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // 格式化日期为YYYY-MM-DD格式
+            function formatDate(date) {
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            }
+            
+            // 打开借书表单
+            $('#addBorrowBtn').on('click', function() {
+                currentLayerIndex = layer.open({
+                    type: 1,
+                    title: '我要借书',
+                    content: $('#borrowFormModal'),
+                    area: ['500px', '550px'],
+                    success: function() {
+                        // 重置表单
+                        $('#borrowForm')[0].reset();
+
+                        // 重新设置借阅者
+                        $('#borrowerInput').val(username);
+
+                        // 初始化日期选择器
+                        initDatePickers();
+                    }
+                });
+            });
+            
+            // 初始化日期选择器
+            function initDatePickers() {
+                // 销毁已有的日期选择器实例（如果存在）
+                if (window.borrowDatePicker && typeof window.borrowDatePicker.destroy === 'function') {
+                    window.borrowDatePicker.destroy();
+                }
+                if (window.returnDatePicker && typeof window.returnDatePicker.destroy === 'function') {
+                    window.returnDatePicker.destroy();
+                }
+
+                // 初始化归还时间选择器
+                var tomorrow = new Date(new Date().setDate(new Date().getDate() + 1));
+                var tomorrowStr = formatDate(tomorrow);
+
+                window.returnDatePicker = laydate.render({
+                    elem: '#returnTimeInput',
+                    min: tomorrowStr,
+                    trigger: 'click'
+                });
+
+                // 设置借阅时间默认值为当前日期，并禁用输入框
+                var today = new Date();
+                $('#borrowTimeInput').val(formatDate(today)).prop('readonly', true);
+            }
+            
+            // 搜索图书 - 借书表单
+            $('#searchBookBtn').on('click', function() {
+                var isbn = $(this).siblings('div').find('input[name="isbn"]').val();
+                if (!isbn) {
+                    layer.msg('请输入ISBN', {icon: 5});
+                    return;
+                }
+                
+                $.ajax({
+                    url: 'http://192.168.1.222:8080/api/user/searchBook?isbn=' + isbn,
+                    method: 'get',
+                    success: function(res) {
+                        if (res.success && res.data && res.data.length > 0) {
+                            // 填充书名
+                            $('input[name="bookTitle"]').val(res.data[0].title);
+                            layer.msg('图书信息已获取', {icon: 1});
+                        } else {
+                            layer.msg('未找到相关图书', {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('查询图书失败', {icon: 5});
+                    }
+                });
+            });
+            
+            // 搜索图书 - 还书表单
+            $('#searchBookBtnReturn').on('click', function() {
+                // 修复：使用正确的选择器获取ISBN值
+                var isbn = $(this).siblings('div').find('input[name="isbn"]').val();
+                if (!isbn) {
+                    layer.msg('请输入ISBN', {icon: 5});
+                    return;
+                }
+                
+                $.ajax({
+                    url: 'http://192.168.1.222:8080/api/user/searchBook?isbn=' + isbn,
+                    method: 'get',
+                    success: function(res) {
+                        if (res.success && res.data && res.data.length > 0) {
+                            // 填充书名
+                            $('input[name="book_title"]').val(res.data[0].title);
+                            layer.msg('图书信息已获取', {icon: 1});
+                        } else {
+                            layer.msg('未找到相关图书', {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('查询图书失败', {icon: 5});
+                    }
+                });
+            });
+            
+            // 自定义重置按钮，保留借阅者和借阅时间
+            $('#resetFormBtn').on('click', function() {
+                // 保存借阅者
+                var borrower = $('#borrowerInput').val();
+
+                // 重置表单
+                $('#borrowForm')[0].reset();
+
+                // 恢复借阅者
+                $('#borrowerInput').val(borrower);
+
+                // 重新初始化日期选择器（不会启用 Layui 选择器）
+                initDatePickers();
+            });
+            
+            // 自定义重置按钮 - 还书表单
+            $('#resetReturnFormBtn').on('click', function() {
+                // 保存ID、借阅者、身份证和手机号
+                var id = $('#returnId').val();
+                var borrower = $('#returnBorrowerInput').val();
+                var idCard = $('#returnIdCardInput').val();
+                var phone = $('#returnPhoneInput').val();
+                
+                // 重置表单
+                $('#returnForm')[0].reset();
+                
+                // 恢复ID、借阅者、身份证和手机号
+                $('#returnId').val(id);
+                $('#returnBorrowerInput').val(borrower);
+                $('#returnIdCardInput').val(idCard);
+                $('#returnPhoneInput').val(phone);
+                
+                // 清空ISBN和书名
+                $('input[name="isbn"]').val('');
+                $('input[name="book_title"]').val('');
+                
+                // 聚焦到ISBN输入框
+                setTimeout(function() {
+                    $('input[name="isbn"]').focus();
+                }, 100);
+            });
+            
+            // 自定义验证规则 - 添加身份证验证
+            form.verify({
+                idCard: function(value) {
+                    // 简单验证18位字符（未包含复杂格式验证，如需更严格验证可使用正则表达式）
+                    if(value.length !== 18) {
+                        return '请输入18位的身份证号码';
+                    }
+                }
+            });
+            
+            // 提交借阅申请
+            form.on('submit(submitBorrow)', function(data) {
+                // 转换日期格式
+                var borrowTime = new Date(data.field.borrowTime).toISOString();
+                var returnTime = new Date(data.field.returnTime).toISOString();
+                
+                var submitData = {
+                    bookTitle: data.field.bookTitle,
+                    isbn: data.field.isbn,
+                    borrower: data.field.borrower,
+                    idCard: data.field.idCard,
+                    phone: data.field.phone,
+                    borrowTime: borrowTime,
+                    returnTime: returnTime
+                };
+                
+                $.ajax({
+                    url: 'http://192.168.1.222:8080/api/user/borrowBook',
+                    method: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(submitData),
+                    success: function(res) {
+                        if (res.success) {
+                            // 修改：延长提示信息显示时长为2000毫秒（2秒）
+                            layer.msg('借书成功', {icon: 1, time: 2000});
+                            // 刷新表格
+                            table.reload('borrowTable');
+                            // 关闭模态框
+                            if (currentLayerIndex) {
+                                layer.close(currentLayerIndex);
+                            }
+                        } else {
+                            layer.msg('借阅失败: ' + res.message, {icon: 5, time: 2000});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('提交失败，请稍后再试', {icon: 5, time: 2000});
+                    }
+                });
+                
+                return false;
+            });
+            
+            // 提交归还申请
+            form.on('submit(submitReturn)', function(data) {
+                var submitData = {
+                    id: data.field.id,
+                    book_title: data.field.book_title,
+                    isbn: data.field.isbn,
+                    borrower: data.field.borrower,
+                    id_card: data.field.id_card,
+                    phone: data.field.phone
+                };
+                
+                $.ajax({
+                    url: 'http://192.168.1.222:8080/api/user/returnBook',
+                    method: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(submitData),
+                    success: function(res) {
+                        if (res.success) {
+                            // 修改：延长提示信息显示时长为2000毫秒（2秒）
+                            layer.msg('归还成功', {icon: 1, time: 2000});
+                            // 刷新表格
+                            table.reload('borrowTable');
+                            // 关闭模态框
+                            if (currentLayerIndex) {
+                                layer.close(currentLayerIndex);
+                            }
+                        } else {
+                            layer.msg('归还失败: ' + res.message, {icon: 5, time: 2000});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('提交失败，请稍后再试', {icon: 5, time: 2000});
+                    }
+                });
+                
+                return false;
+            });
+            
+            // 监听右上角关闭按钮点击事件
+            $(document).on('click', '.layui-layer-close', function() {
+                // 只关闭当前打开的 layer
+                if (currentLayerIndex) {
+                    layer.close(currentLayerIndex);
+                    currentLayerIndex = null;
+                }
+            });
+            
+            // 关闭所有模态框
+            function closeAllModals() {
+                if (currentLayerIndex) {
+                    layer.close(currentLayerIndex);
+                    currentLayerIndex = null;
+                }
+            }
+            
+            // 确保在DOM加载完成后初始化日期选择器
+            $(document).ready(function() {
+                // 可以在这里初始化默认日期选择器，或者等待用户打开模态框时再初始化
+            });
+        });
+    </script>
+
+</body>
+
+</html>
+    

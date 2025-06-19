@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
+		<meta name="renderer" content="webkit">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="shortcut icon" href="images\lanxige.jpg" />
+		<link rel="bookmark" href="images\lanxige.jpg" />
+		<link rel="stylesheet" type="text/css" href="css/base.css">
+		<link rel="stylesheet" type="text/css" href="css/iconfont.css">
+		<script type="text/javascript" src="framework/jquery-1.11.3.min.js" ></script>
+		<link rel="stylesheet" type="text/css" href="layui/css/layui.css">
+		<script type="text/javascript" src="layui/layui.js"></script>
+		<link rel="stylesheet" type="text/css" href="css/jquery.mCustomScrollbar.css">
+		<script src="framework/jquery-ui-1.10.4.min.js"></script>
+		<script src="framework/jquery.mousewheel.min.js"></script>
+		<script src="framework/jquery.mCustomScrollbar.min.js"></script>
+		<script src="framework/cframe.js"></script>
+		<link rel="stylesheet" type="text/css" href="css/login.css">
+		<script type="text/javascript" src="js/login.js"></script>
+		<style>
+			#backToLogin {
+				position: absolute;
+				top: 10px;
+				left: 10px;
+				font-size: 16px;
+				font-weight: bold;
+				color: black; /* 设置字体颜色为黑色 */
+				text-decoration: none; /* 去掉下划线 */
+			}
+			#backToLogin:hover {
+				text-decoration: none; /* 悬停时也去掉下划线 */
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="login_main">
+			<div class="layui-carousel lbt" id="loginLbt">
+				<div carousel-item>
+					<div class="item" style="background: url(images/login_bg2.jpg) no-repeat; background-size: cover;"></div>
+					<div class="item" style="background: url(images/login_bg1.jpg) no-repeat; background-size: cover;"></div>
+				</div>
+			</div>
+			<div class="logo">
+				<img src="images\lanxige.jpg" />
+				<div>
+					<h1>东莞市图书馆出品</h1>
+					<p>版本号:1.0.0</p>
+				</div>
+			</div>
+			<div class="form_tzgg">
+				<div class="form">
+					<a href="login.html" id="backToLogin">返回登录</a> 
+
+					<form action="" method="post" class="layui-form">
+						<div class="title">注册用户</div>
+						<div class="con" onclick="getFocus(this)">
+							<input type="text" name="username" lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+						</div>
+						<div class="con" onclick="getFocus(this)">
+							<input type="password" name="password" required lay-verify="required" placeholder="请输入密码" autocomplete="off" class="layui-input">
+						</div>						
+						<div class="con" onclick="getFocus(this)">
+							<input type="text" name="phone" required lay-verify="required" placeholder="请输入手机号码" autocomplete="off" class="layui-input">
+						</div>
+						<div class="con" onclick="getFocus(this)">
+							<input type="text" name="idCard" required lay-verify="idCard" placeholder="请输入身份证号" autocomplete="off" class="layui-input">
+						</div>
+						<div class="but">
+							<button class="layui-btn" lay-submit lay-filter="formDemo">注册</button>
+						</div>
+					</form>
+				</div>
+				<script>
+					layui.use(['form', 'layer'], function () {
+						var form = layui.form;
+						var layer = layui.layer;
+
+						// 添加身份证号验证规则
+						form.verify({
+							idCard: function (value, item) {
+								if (value.length !== 18) {
+									return '请输入正确的身份证号';
+								}
+							}
+						});
+
+						// 监听表单提交
+						form.on('submit(formDemo)', function (data) {
+							$.ajax({
+								url: 'http://127.0.0.1:8080/api/register',
+								type: 'POST',
+								contentType: 'application/json',
+								data: JSON.stringify({
+									username: data.field.username,
+									password: data.field.password,
+									phone: data.field.phone,
+									idCard: data.field.idCard
+								}),
+								success: function (res) {
+									if (res.success) {
+										layer.msg('注册成功', {icon: 1, time: 1500}, function () {
+											window.location.href = "login.html";
+										});
+									} else {
+										layer.msg(res.message || '注册失败', {icon: 2});
+									}
+								},
+								error: function () {
+									layer.msg('服务器异常，请稍后重试', {icon: 2});
+								}
+							});
+							return false; // 阻止默认的表单提交
+						});
+					});
+				</script>
+			</div>
+		</div>
+	</body>
+
+</html>

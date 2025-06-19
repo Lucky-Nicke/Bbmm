@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>用户管理</title>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/base.css">
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/iconfont.css">
+    <script type="text/javascript" src="../../bmmm_html/framework/jquery-1.11.3.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/layui/css/layui.css">
+    <script type="text/javascript" src="../../bmmm_html/layui/layui.js"></script>
+    <link rel="stylesheet" type="text/css" href="../../bmmm_html/css/jquery.mCustomScrollbar.css">
+    <script src="../../bmmm_html/framework/jquery-ui-1.10.4.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mousewheel.min.js"></script>
+    <script src="../../bmmm_html/framework/jquery.mCustomScrollbar.min.js"></script>
+    <script src="../../bmmm_html/framework/cframe.js"></script>
+</head>
+
+<body>
+    <div style="padding: 20px;">
+        <button class="layui-btn" id="addUserBtn">添加用户</button>
+        <table class="layui-hide" id="userTable" lay-filter="userTable"></table>
+    </div>
+
+    <script>
+        layui.use(['table', 'layer', 'form', 'util'], function () {
+            var table = layui.table;
+            var layer = layui.layer;
+            var form = layui.form;
+            var util = layui.util;
+
+            // 渲染用户表格
+            table.render({
+                elem: '#userTable',
+                url: 'http://192.168.1.222:8080/api/admin/userList',
+                method: 'get',
+                page: true,
+                cols: [[
+                    { field: 'id', title: '用户ID', align: 'center' },
+                    { field: 'username', title: '用户名', align: 'center' },
+                    { field: 'password', title: '密码', align: 'center' },
+                    { field: 'phone', title: '手机号', align: 'center' },
+                    { field: 'idCard', title: '身份证', align: 'center' },
+                    {
+                        field: 'role',
+                        title: '角色',
+                        align: 'center',
+                        templet: function (d) {
+                            var roleMap = {
+                                "admin": "管理员",
+                                "user": "读者"
+                            };
+                            return roleMap[d.role] || d.role;
+                        }
+                    },
+                    { field: 'lastLoginTime', title: '最后登录时间', align: 'center' },
+                    { field: 'createTime', title: '创建时间', align: 'center' },
+                    { field: 'updateTime', title: '更新时间', align: 'center' },
+                    { title: '操作', align: 'center', toolbar: '#actionButtons' }
+                ]],
+                parseData: function (res) {
+                    // 适配新的响应格式
+                    return {
+                        "code": res.success ? 0 : 1,
+                        "msg": res.message,
+                        "count": res.data ? res.data.total : 0, // 假设data包含总数
+                        "data": res.data ? res.data.records : [] // 假设data包含记录列表
+                    };
+                }
+            });
+
+            // 添加用户按钮点击事件
+            $('#addUserBtn').click(function () {
+                openAddUserForm();
+            });
+
+            // 打开添加用户的表单
+            function openAddUserForm() {
+                layer.open({
+                    title: '添加用户',
+                    type: 1,
+                    area: ['450px', '520px'],
+                    content: `
+                        <form class="layui-form" style="padding: 20px;">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">用户名</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="username" id="username" class="layui-input" placeholder="请输入用户名" required>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">密码</label>
+                                <div class="layui-input-block">
+                                    <input type="password" name="password" id="password" class="layui-input" placeholder="请输入密码" required>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">手机号</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="phone" id="phone" class="layui-input" placeholder="请输入手机号" required>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">身份证</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="idCard" id="idCard" class="layui-input" placeholder="请输入身份证" required>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">角色</label>
+                                <div class="layui-input-block">
+                                    <select name="role" id="role" lay-verify="required">
+                                        <option value="">请选择角色</option>
+                                        <option value="user">读者</option>
+                                        <option value="admin">管理员</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn" id="saveButton">保存</button>
+                                    <button type="button" class="layui-btn layui-btn-primary" id="resetButton">重置</button>
+                                    <button type="button" class="layui-btn layui-btn-primary" id="cancelButton">取消</button>
+                                </div>
+                            </div>
+                        </form>
+                    `,
+                    success: function (layero, index) {
+                        form.render(); // 渲染表单元素
+
+                        // 重置按钮事件
+                        $('#resetButton').click(function () {
+                            $('#username, #password, #phone, #idCard, #role').val('');
+                            form.render('select'); // 重新渲染下拉框
+                            $('.layui-form-item').removeClass('has-error'); // 清除高亮
+                        });
+
+                        $('#saveButton').click(function () {
+                            // 表单验证
+                            if (!validateForm()) return;
+
+                            var userData = {
+                                "username": $('#username').val(),
+                                "password": $('#password').val(),
+                                "phone": $('#phone').val(),
+                                "idCard": $('#idCard').val(),
+                                "role": $('#role').val()
+                            };
+
+                            var loadIndex = layer.load(1, {shade: [0.1,'#fff']}); // 显示加载动画
+                            $.ajax({
+                                url: 'http://192.168.1.222:8080/api/admin/userAdd',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify(userData),
+                                success: function (res) {
+                                    layer.close(loadIndex); // 关闭加载动画
+                                    if (res.success) {
+                                        layer.msg(res.message, { icon: 1 });
+                                        table.reload('userTable', {
+                                            done: function() {
+                                                layer.close(index);
+                                            }
+                                        });
+                                    } else {
+                                        layer.msg(res.message, { icon: 2 });
+                                    }
+                                },
+                                error: function (jqXHR) {
+                                    layer.close(loadIndex); // 关闭加载动画
+                                    layer.msg('请求失败: ' + (jqXHR.responseJSON?.message || '未知错误'), { icon: 2 });
+                                }
+                            });
+                        });
+
+                        $('#cancelButton').click(function () {
+                            layer.close(index);
+                        });
+                    }
+                });
+            }
+
+            // 操作按钮事件
+            table.on('tool(userTable)', function (obj) {
+                var data = obj.data;
+                var event = obj.event;
+
+                if (event === 'edit') {
+                    layer.open({
+                        title: '编辑用户信息',
+                        type: 1,
+                        area: ['450px', '570px'],
+                        content: `
+                            <form class="layui-form" style="padding: 20px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">用户ID</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="id" id="id" value="${data.id}" class="layui-input" disabled>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">用户名</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="username" id="username" value="${data.username}" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">密码</label>
+                                    <div class="layui-input-block">
+                                        <input type="password" name="password" id="password" value="${data.password}" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">手机号</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="phone" id="phone" value="${data.phone}" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">身份证</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="idCard" id="idCard" value="${data.idCard}" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">角色</label>
+                                    <div class="layui-input-block">
+                                        <select name="role" id="role" lay-verify="required">
+                                            <option value="">请选择角色</option>
+                                            <option value="user" ${data.role === 'user' ? 'selected' : ''}>读者</option>
+                                            <option value="admin" ${data.role === 'admin' ? 'selected' : ''}>管理员</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button type="button" class="layui-btn" id="saveButton">保存</button>
+                                        <button type="button" class="layui-btn layui-btn-primary" id="cancelButton">取消</button>
+                                    </div>
+                                </div>
+                            </form>
+                        `,
+                        success: function (layero, index) {
+                            form.render(); // 渲染表单元素
+
+                            $('#saveButton').click(function () {
+                                // 表单验证
+                                if (!validateForm()) return;
+
+                                var updatedData = {
+                                    "id": data.id,
+                                    "username": $('#username').val(),
+                                    "password": $('#password').val(),
+                                    "phone": $('#phone').val(),
+                                    "idCard": $('#idCard').val(),
+                                    "role": $('#role').val()
+                                };
+
+                                var loadIndex = layer.load(1, {shade: [0.1,'#fff']}); // 显示加载动画
+                                $.ajax({
+                                    url: 'http://192.168.1.222:8080/api/admin/userEdit',
+                                    type: 'PUT',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify(updatedData),
+                                    success: function (res) {
+                                        layer.close(loadIndex); // 关闭加载动画
+                                        if (res.success) {
+                                            layer.msg(res.message, { icon: 1 });
+                                            table.reload('userTable', {
+                                                done: function() {
+                                                    layer.close(index);
+                                                }
+                                            });
+                                        } else {
+                                            layer.msg(res.message, { icon: 2 });
+                                        }
+                                    },
+                                    error: function (jqXHR) {
+                                        layer.close(loadIndex); // 关闭加载动画
+                                        layer.msg('请求失败: ' + (jqXHR.responseJSON?.message || '未知错误'), { icon: 2 });
+                                    }
+                                });
+                            });
+
+                            $('#cancelButton').click(function () {
+                                layer.close(index);
+                            });
+                        }
+                    });
+                } else if (event === 'delete') {
+                    layer.confirm('确定删除该用户吗？', { icon: 3, title: '提示' }, function (confirmIndex) {
+                        var loadIndex = layer.load(1, {shade: [0.1,'#fff']}); // 显示加载动画
+                        $.ajax({
+                            url: 'http://192.168.1.222:8080/api/admin/userDel',
+                            type: 'DELETE',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ id: data.id }),
+                            success: function (res) {
+                                layer.close(loadIndex); // 关闭加载动画
+                                if (res.success) {
+                                    layer.msg(res.message, { icon: 1 });
+                                    table.reload('userTable');
+                                } else {
+                                    layer.msg(res.message, { icon: 2 });
+                                }
+                                layer.close(confirmIndex);
+                            },
+                            error: function (jqXHR) {
+                                layer.close(loadIndex); // 关闭加载动画
+                                layer.msg('请求失败: ' + (jqXHR.responseJSON?.message || '未知错误'), { icon: 2 });
+                                layer.close(confirmIndex);
+                            }
+                        });
+                    });
+                }
+            });
+
+            // 表单验证函数
+            function validateForm() {
+                var isValid = true;
+                var requiredFields = ['username', 'password', 'phone', 'idCard', 'role'];
+
+                // 重置所有高亮
+                $('.layui-form-item').removeClass('has-error');
+
+                // 检查必填字段
+                requiredFields.forEach(function (field) {
+                    var value = $('#' + field).val();
+                    if (!value) {
+                        isValid = false;
+                        $('#' + field).closest('.layui-form-item').addClass('has-error');
+                    }
+                });
+
+                // 检查手机号格式
+                var phoneVal = $('#phone').val();
+                if (phoneVal && !/^1[3-9]\d{9}$/.test(phoneVal)) {
+                    isValid = false;
+                    $('#phone').closest('.layui-form-item').addClass('has-error');
+                }
+
+                // 检查身份证格式
+                var idCardVal = $('#idCard').val();
+                if (idCardVal && !/(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/.test(idCardVal)) {
+                    isValid = false;
+                    $('#idCard').closest('.layui-form-item').addClass('has-error');
+                }
+
+                if (!isValid) {
+                    layer.msg('请填写正确的表单信息', { icon: 2 });
+                }
+                return isValid;
+            }
+
+            // 添加表单验证样式
+            $('head').append(`
+                <style>
+                    .has-error .layui-input {
+                        border-color: #FF5722 !important;
+                    }
+                    .has-error .layui-form-label {
+                        color: #FF5722 !important;
+                    }
+                </style>
+            `);
+        });
+    </script>
+
+    <script type="text/html" id="actionButtons">
+        <button class="layui-btn layui-btn-xs" lay-event="edit">编辑</button>
+        <button class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</button>
+    </script>
+
+</html>
